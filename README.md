@@ -8,13 +8,16 @@ Please adhere to the python styleguide (http://www.itanveer.com/coding-style/) a
 # Installation
 
 ## Using python
+```
 python setup.py install
+```
 
 ## Docker
 For the correct rendering of Bangla scripts, use the docker environment
+```
 docker build -t shobdokutir .
 docker run -ti --name shobdokutir shobdokutir /bin/bash
-
+```
 
 * Author: Md Iftekhar Tanveer
 * Email:  go2chayan@gmail.com
