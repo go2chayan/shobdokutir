@@ -389,15 +389,3 @@ def unicode2bijoy(src_string: str) -> str:
         target_string += apply_char_map(temp_string, u2b_maps)
     return target_string
 
-
-def main():
-    with open("bijoyinput.txt", "r") as fr:
-        with open("convertedunicode.txt", "w") as fw:            
-            for row in fr:
-                fw.writelines(row)
-                fw.writelines("\n")
-                fw.writelines(bijoy2unicode(row))
-                fw.writelines("\n\n\n")
-
-if __name__ == "__main__":
-    main()
