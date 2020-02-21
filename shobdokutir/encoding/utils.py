@@ -28,7 +28,7 @@ b2u_maps = {
     "w": "ি", "x": "ী", "y": "ু", "~": "ূ", "…": "ৃ", "‡": "ে", "‰": "ৈ", "Š": "ৗ", "s": "ং", "t": "ঃ",
     "u": "ঁ", "Ö": "্র", "ª" : "্র", "†":"ে", "„": "ৃ", "¯Í": "স্ত", "ˆ": "ৈ", "ÿ" : "ক্ষ","•" : "ক্স","Y\^" : "ণ্ব",
     "˜¡" : "দ্ব","šÍ" : "ন্ত","š\^" : "ন্ব","cø" : "প্ল","¤\^" : "ম্ব","iæ" : "রু","jø" : "ল্ল","kø" : "শ্ল","¯\^" : "স্ব",
-    "z" : " ু","\ˆ" : " ৈ","\|" : "।", "\&" : " ্"
+    "z" : "ু"
 }
 
 u2b_maps = {
@@ -53,7 +53,7 @@ u2b_maps = {
     "দ": "`", "ধ": "a", "ন": "b", "প": "c", "ফ": "d", "ব": "e", "ভ": "f", "ম": "g", "য": "h", "র": "i", "ল": "j",
     "শ": "k", "ষ": "l", "স": "m", "হ": "n", "ড়": "o", "ঢ়": "p", "য়": "q", "ৎ": "r", "০": "0", "১": "1", "২": "2",
     "৩": "3", "৪": "4", "৫": "5", "৬": "6", "৭": "7", "৮": "8", "৯": "9", "া": "v", "ি": "w", "ী": "x", "ু": "y",
-    "ূ": "~", "ৃ": "…", "ে": "‡", "ৈ": "‰", "ৗ": "Š", "ং": "s", "ঃ": "t", "ঁ": "u", "স্ত": "¯Í"
+    "ূ": "~", "ৃ": "…", "ে": "‡", "ৈ": "‰", "ৗ": "Š", "ং": "s", "ঃ": "t", "ঁ": "u"
 }
 
 
@@ -281,23 +281,14 @@ def _get_hasant_indices(group):
 def _shift_right(target: List, pos: int) -> List:
     """
     Shift prekars to right until stopping condition is met
-    """
-    # Blind shift once
-    #Shift prekars to right until stopping condition is met
-    
+    """   
     #Blind shift once
     target[pos], target[pos+1] = target[pos+1], target[pos]
     pos += 1
 
     #If there is a ref at the right, shift again
     if pos < len(target)-1:
-        if target[pos+1] == "©":
-            target[pos], target[pos+1] = target[pos+1], target[pos]
-
-        elif target[pos+1] == "¨":
-            target[pos], target[pos+1] = target[pos+1], target[pos]
-
-        elif target[pos+1] == "«" or target[pos+1] == "ª":
+        if target[pos+1] == "©" or target[pos+1] == "¨" or target[pos+1] == "«" or target[pos+1] == "ª":
             target[pos], target[pos+1] = target[pos+1], target[pos]
     return target
 
@@ -306,13 +297,17 @@ def _rearrange_b2u(target: List, prekar_set: Set) -> List:
     # store the indices of refs, prekars and postkars in these lists
     refs = []
     prekars = []
+    chondrobindus = []
     fola_set = {"…", "ª", "«", "¨", "Ö", "„"}
+    kar_set = {"‡", "w", "‰", "†", "ˆ","v", "Š", "y", "~", "x", "…" }
     for i, char in enumerate(target):
         if char in prekar_set:
             # if the character I'm standing on is a prekar
             prekars.append(i)
-    
+                
     for pr in prekars:
+        if target[pr+1] == "©" or target[pr+1] in fola_set:
+            target[pr+1], target[pr+2] = target[pr+2], target[pr+1]
         target = _shift_right(target, pr)
 
     for i, char in enumerate(target):
@@ -324,8 +319,17 @@ def _rearrange_b2u(target: List, prekar_set: Set) -> List:
         # rearrange all the refs
         # banjonborno(or juktoborno) + ref => ref + banjonborno(or juktoborno)
         target[r], target[r-1] = target[r-1], target[r]
-        if target[r] in fola_set:
+        if (target[r] in fola_set) or (target[r] in kar_set) :
             target[r-1], target[r-2] = target[r-2], target[r-1]
+    
+    for i, char in enumerate(target):
+        if char == "u":
+            # if the character I'm standing on is a chondrobindu
+            chondrobindus.append(i)
+    
+    for c in chondrobindus:
+        if target[c+1] in kar_set:
+            target[c+1], target[c] = target[c], target[c+1]
 
     return target
     
@@ -389,3 +393,15 @@ def unicode2bijoy(src_string: str) -> str:
         target_string += apply_char_map(temp_string, u2b_maps)
     return target_string
 
+
+def main(): 
+    print(bijoy2unicode("AvuwLZviv ‡cŠuQv‡Z SuywK euvk agx©q chv©‡qi"))
+    # with open("bijoyinput.txt", "r") as fr:
+    #     with open("convertedunicode.txt", "w") as fw:            
+    #         for row in fr:
+    #             fw.writelines(row)
+    #             fw.writelines("\n")
+    #             fw.writelines(bijoy2unicode(row))
+    #             fw.writelines("\n\n\n")
+if __name__ == "__main__":
+    main()
