@@ -65,32 +65,3 @@ def get_font_details():
         font_details.setdefault(font_entry[1], {'path': [], 'style': []})['path'].append(font_entry[0])
         font_details[font_entry[1]]['style'].append(font_entry[2])
     return font_details
-
-# if __name__=='__main__':
-#     # TODO: Render the Folas: ro fola, bo fola, jo fola
-#     for afont in fontlist:
-#         process,driver = initiate(font_name=afont,font_size=14)
-#         sleep(5)
-#         for acomp in letters:
-#             fname = 'pics/'+letters[acomp]+'_'+afont+'.png'
-#             txt2img(driver,letters[acomp],fname)
-#             sleep(0.125)
-#             call(['convert',fname,'-trim',fname])
-#         for akar in kars:
-#             for acomp in letters:
-#                 fname = 'pics/'+letters[acomp]+kars[akar]+'_'+afont+'.png'
-#                 txt2img(driver,letters[acomp]+kars[akar],fname)
-#                 sleep(0.125)
-#                 call(['convert',fname,'-trim',fname])
-#         for acomp in allcompound:
-#             fname = 'pics/'+acomp+'_'+afont+'.png'
-#             txt2img(driver,acomp,fname)
-#             sleep(0.125)
-#             call(['convert',fname,'-trim',fname])
-#         for akar in kars:
-#             for acomp in allcompound:
-#                 fname = 'pics/'+acomp+kars[akar]+'_'+afont+'.png'
-#                 txt2img(driver,acomp+kars[akar],fname)
-#                 sleep(0.125)
-#                 call(['convert',fname,'-trim',fname])
-#         clear_all(process,driver)
