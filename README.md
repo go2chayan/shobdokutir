@@ -16,7 +16,7 @@ python setup.py install
 For the correct rendering of Bangla scripts, use the docker environment
 ```
 docker build -t shobdokutir .
-docker run -ti --name shobdokutir shobdokutir /bin/bash
+docker run -ti --name=shobdokutir shobdokutir /bin/bash
 ```
 
 From within the docker environment, please execute the following command to initiate xvfb, which helps the code to render

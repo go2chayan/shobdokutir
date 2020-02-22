@@ -54,6 +54,9 @@ class OpticalTextBuilder:
 
 
 def get_font_details():
+    """
+    Returns a list of available fonts in the system and their details
+    """
     font_list = check_output(["fc-list"]).decode("unicode-escape").split("\n")
     font_details = {}
     for a_font in font_list:
