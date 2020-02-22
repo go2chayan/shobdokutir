@@ -19,6 +19,13 @@ docker build -t shobdokutir .
 docker run -ti --name shobdokutir shobdokutir /bin/bash
 ```
 
+From within the docker environment, please execute the following command to initiate xvfb, which helps the code to render
+the correct output.
+```
+source scripts/enable-xvfb.sh
+```
+
+# Contact
 * Author: Md Iftekhar Tanveer
 * Email:  go2chayan@gmail.com
 * webpage: shobdokutir.com
