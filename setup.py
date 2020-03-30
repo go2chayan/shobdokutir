@@ -52,7 +52,7 @@ setup(
     author="Md Iftekhar Tanveer",
     author_email="go2chayan@gmail.com",
     description="A comprehensive Natural Language Processing (NLP) suite for Bangla and other low-resource Language",
-    long_description=open("README", "r", encoding='utf-8').read(),
+    long_description=open("README.md", "r", encoding='utf-8').read(),
     long_description_content_type="text/markdown",
 
     packages=find_packages(),
