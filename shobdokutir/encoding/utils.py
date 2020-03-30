@@ -393,10 +393,3 @@ def unicode2bijoy(src_string: str) -> str:
         target_string += apply_char_map(temp_string, u2b_maps)
     return target_string
 
-
-def main(): 
-    print(bijoy2unicode("AvuwLZviv ‡cŠuQv‡Z SuywK euvk agx©q chv©‡qi"))
-
-
-if __name__ == "__main__":
-    main()
