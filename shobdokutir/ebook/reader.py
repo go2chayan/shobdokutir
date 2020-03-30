@@ -38,7 +38,7 @@ def read_epub(epub_file: str) -> List[Dict]:
     return full_text
 
 
-def pdf_text_iter(pdf_file: str, accumulate_per_page: bool = True) -> Iterator[Dict]:
+def pdf_iter(pdf_file: str, accumulate_per_page: bool = True) -> Iterator[Dict]:
     """
     Extracts text blobs from a pdf file
     :param pdf_file: full path of the pdf file
