@@ -72,8 +72,8 @@ setup(
                       'pillow',
                       'pdfminer'],
 
-    setup_requires=['pytest-runner'],
-    tests_require=['pytest', 'pytest-cov'],
+    test_suite='nose.collector',
+    tests_require=['nose'],
     classifiers=[
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
