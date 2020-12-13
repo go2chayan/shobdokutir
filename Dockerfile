@@ -5,12 +5,10 @@ WORKDIR /home/shobdokutir
 ADD ./ ./
 
 RUN apt-get update && \
-  apt-get install -y build-essential bash-completion git ssh wget screen vim python3.8 && \
-  rm /usr/bin/python3 && \
-  ln -s /usr/bin/python3.8 /usr/bin/python && \
-  ln -s /usr/bin/python3.8 /usr/bin/python3 && \
+  apt-get install -y build-essential bash-completion git ssh wget screen vim python3 && \
+  ln -s /usr/bin/python3 /usr/bin/python && \
   apt-get install -y python3-pip && \
-  pip3 install --upgrade pip && \
+  ln -s /usr/bin/pip3 /usr/bin/pip && \
   pip install ipython
 
 ####################### Install Locales and Install Fonts ############################
