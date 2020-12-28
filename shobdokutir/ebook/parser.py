@@ -132,7 +132,8 @@ def pdf_iter(pdf_file: str, accumulate_per_page: bool = True) -> Iterator[Dict]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Bangla Ebook Parser")
-    parser.add_argument("--get_meta", action="store", default=None, type=str, nargs="+", help="Extracts the meta for a given epub. Please provide the full path of the epub file")
+    parser.add_argument("--get_meta", action="store", default=None, type=str, nargs="+", help="Extracts the meta for a given epub and outputs to stdout \
+        as a newline-delimited json. Please provide the full path of the epub file as an input argument.")
     args = parser.parse_args()
 
     if args.get_meta:
