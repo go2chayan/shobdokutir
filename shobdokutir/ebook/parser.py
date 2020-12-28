@@ -65,7 +65,8 @@ def epub_meta_to_json(epub_file):
             output_blob['all_ids'] = [an_id.text for an_id in content_parsed.find_all("dc:identifier")]
             title = content_parsed.find("dc:title")
             output_blob['title'] = title.text if title is not None else None
-            output_blob['creator'] = [a_creator.text for a_creator in content_parsed.find_all("dc:creator")]
+            creator = content_parsed.find("dc:creator")
+            output_blob['creator'] = creator.text if creator is not None else None
 
         if content_parsed.manifest is None:
             output_blob['manifest'] = None
