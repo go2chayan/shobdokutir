@@ -12,6 +12,8 @@ from pdfminer.converter import PDFPageAggregator
 from pdfminer.pdfpage import PDFPage
 from pdfminer.layout import LTTextBoxHorizontal
 
+from shobdokutir.encoding.utils import file_hash
+
 
 def epub_iter(epub_file: str) -> Iterator[Dict]:
     """
@@ -51,18 +53,20 @@ def epub_meta_to_json(epub_file):
         return content_file[0]
 
     def extract_meta(content, epub_file):
-        epub_path, epub_filename = os.path.split(epub_file)
-        output_blob = {'epub_filename': epub_filename, 'content_str': content}
+        _, epub_filename = os.path.split(epub_file)
+        output_blob = {'md5_hash': file_hash(open(epub_file, "rb")), 'epub_filename': epub_filename, 'content_str': content}
         content_parsed = BeautifulSoup(content, "lxml")
         if content_parsed.metadata is None:
-            output_blob['uuid'] = None
             output_blob['all_ids'] = None
             output_blob['title'] = None
             output_blob['creator'] = None
         else:
-            uuid = content_parsed.find("dc:identifier", id="uuid_id")
-            output_blob['uuid'] = uuid.text if uuid is not None else None
-            output_blob['all_ids'] = [an_id.text for an_id in content_parsed.find_all("dc:identifier")]
+            all_ids = []
+            all_id_tags = content_parsed.find_all("dc:identifier")
+            for an_id in all_id_tags:
+                an_id_attrs = {a_key.replace(":", "_"): an_id.attrs[a_key] for a_key in an_id.attrs}
+                all_ids.append({"value": an_id.text, "attrs": an_id_attrs})
+            output_blob['all_ids'] = all_ids
             title = content_parsed.find("dc:title")
             output_blob['title'] = title.text if title is not None else None
             creator = content_parsed.find("dc:creator")

@@ -1,5 +1,7 @@
+import sys
+import hashlib
 import re
-from typing import Dict, List, Set
+from typing import Dict, List, Set, BinaryIO
 
 
 b2u_maps = {
@@ -392,4 +394,17 @@ def unicode2bijoy(src_string: str) -> str:
             temp_string += char[1]
         target_string += apply_char_map(temp_string, u2b_maps)
     return target_string
+
+
+def file_hash(f_in: BinaryIO, buffer_size = 65536) -> str:
+    """
+    Given a file stream opened in binary mode, constructs a MD5 hash for the file
+    """
+    md5 = hashlib.md5()
+    while True:
+        data = f_in.read(buffer_size)
+        if not data:
+            break
+        md5.update(data)
+    return md5.hexdigest()
 
