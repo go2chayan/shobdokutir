@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import argparse
-from typing import Generator, Iterator, List, Dict, BinaryIO
+from typing import Iterator, List, Dict
 import zipfile as zf
 
 from bs4 import BeautifulSoup
@@ -15,10 +15,9 @@ from pdfminer.layout import LTTextBoxHorizontal
 from shobdokutir.encoding.utils import file_hash
 
 
-#TODO: Refactor this function to return a dictionary, not json. jsonification will be done in main
-def epub_meta_to_json(epub_file: str) -> str:
+def epub_get_meta(epub_file: str) -> Dict:
     """
-    Reads the content.opf file of an epub and produces a json str with the following schema.
+    Reads the content.opf file of an epub and produces a dict with the following schema.
     The schema is designed to be stored as a bigquery table.
 
     ## Metadata Schema
@@ -66,7 +65,7 @@ def epub_meta_to_json(epub_file: str) -> str:
         else:
             output_blob['spine'] = [an_itemref['idref'] for an_itemref in content_parsed.spine.find_all('itemref')]
 
-        return json.dumps(output_blob, ensure_ascii=False).encode("utf-8")
+        return output_blob
 
     with zf.ZipFile(epub_file) as epub:
         content_file = find_content_file(epub)
@@ -83,7 +82,7 @@ def epub_xhtml_iter(epub_file: str) -> str:
     """
     An iterator that yields the xhtml contents of an epub and other info
     """
-    meta_data = json.loads(epub_meta_to_json(epub_file))
+    meta_data = epub_get_meta(epub_file)
     if 'spine' not in meta_data or meta_data['spine'] is None or \
             'manifest' not in meta_data or meta_data['manifest'] is None:
         raise Exception(
@@ -205,6 +204,6 @@ if __name__ == "__main__":
 
     if args.get_meta:
         filename = " ".join(args.get_meta)
-        meta = epub_meta_to_json(filename).decode("utf-8")
+        meta = json.dumps(epub_get_meta(filename), ensure_ascii=False)
         meta = "{0}\n".format(meta).encode("utf8")
         sys.stdout.buffer.write(meta)
