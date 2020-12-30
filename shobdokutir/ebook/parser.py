@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import argparse
-from typing import Iterator, List, Dict
+from typing import Generator, Iterator, List, Dict, BinaryIO
 import zipfile as zf
 
 from bs4 import BeautifulSoup
@@ -15,33 +15,17 @@ from pdfminer.layout import LTTextBoxHorizontal
 from shobdokutir.encoding.utils import file_hash
 
 
-def epub_iter(epub_file: str) -> Iterator[Dict]:
+#TODO: Refactor this function to return a dictionary, not json. jsonification will be done in main
+def epub_meta_to_json(epub_file: str) -> str:
     """
-    A python generator that iterates over the html files within an epub file.
-    :param epub_file: Full path of the file
-    :return: Iterator containing a dictionary of 'title' and body ('text') texts for each html within the epub
-    """
-    with zf.ZipFile(epub_file) as epub:
-        for a_file in epub.namelist():
-            if a_file.endswith('.html') or a_file.endswith('.htm'):
-                with epub.open(a_file) as an_html:
-                    text_seg = BeautifulSoup(an_html.read().decode(), 'lxml')
-                    if text_seg.title:
-                        yield {'title': text_seg.title.get_text(), 'text': text_seg.body.get_text()}
-                    else:
-                        yield {'title': "", 'text': text_seg.body.get_text()}
-
-
-def epub_meta_to_json(epub_file):
-    """
-    Reads the content.opf file of an epub and produces a json blob with the following schema.
+    Reads the content.opf file of an epub and produces a json str with the following schema.
     The schema is designed to be stored as a bigquery table.
 
     ## Metadata Schema
-    uuid, all_ids, title, creator, epub_filename, manifest, spine, content_str
+    md5_hash, all_ids, title, creator, epub_filename, manifest, spine, content_str
 
     ## Manifest Schema
-    [ [id, item, media_type], ... ]
+    [ {'id': id, 'item': item, 'media_type': media_type}, ... ]
 
     ## Spine Schema
     [idref, idref, ...]
@@ -87,8 +71,87 @@ def epub_meta_to_json(epub_file):
     with zf.ZipFile(epub_file) as epub:
         content_file = find_content_file(epub)
         with epub.open(content_file) as meta_file:
-            meta_data = " ".join(meta_file.read().decode("utf-8").split('\n'))
+            meta_data = clean_xhtml_code(meta_file.read())
             return extract_meta(meta_data, epub_file)
+
+
+def clean_xhtml_code(xhtml: str) -> str:
+    return " ".join(xhtml.decode("utf-8").split('\n'))
+
+
+def epub_xhtml_iter(epub_file: str) -> str:
+    """
+    An iterator that yields the xhtml contents of an epub and other info
+    """
+    meta_data = json.loads(epub_meta_to_json(epub_file))
+    if 'spine' not in meta_data or meta_data['spine'] is None or \
+            'manifest' not in meta_data or meta_data['manifest'] is None:
+        raise Exception(
+            "Critical metainfo was not found in: {0}".format(epub_file))
+    manifest_map = {
+        manifest_item['id']: manifest_item for manifest_item in meta_data['manifest']}
+    with zf.ZipFile(epub_file) as epub:
+        for i, idref in enumerate(meta_data['spine']):
+            if not idref in manifest_map:
+                raise Exception(
+                    "Spine content was not found in manifest {0}".format(epub_file))
+            xhtml = manifest_map[idref]['item']
+            with epub.open(xhtml) as epub_page:
+                xhtml_md5_hash = file_hash(epub_page)
+            with epub.open(xhtml) as epub_page:
+                xhtml_content = epub_page.read()
+            yield {'xhtml_content': xhtml_content, 'xhtml_md5_hash': xhtml_md5_hash,
+                   'epub_md5_hash': meta_data['md5_hash'], 'xhtml_href': xhtml, 'xhtml_index': i}
+
+
+def parse_xhtml_contents(xhtml: str) -> Dict:
+    cleaned_content = clean_xhtml_code(xhtml)
+    parsed_content = BeautifulSoup(cleaned_content, "lxml")
+    record = {'xhtml_code': cleaned_content, 
+              'title': parsed_content.title.get_text() if parsed_content.title else "",
+              'text': parsed_content.body.get_text() if parsed_content.body else "",
+              'text_split': [a_tag.get_text() for a_tag in parsed_content.body.contents if a_tag.name],
+              'text_split_type': [a_tag.name for a_tag in parsed_content.body.contents if a_tag.name]
+              }
+    return record
+
+
+def epub_to_json(epub_file: str) -> List[str]:
+    """
+    Reads the xhtml files of an epub and produces a list of json strings with the following schema.
+    The schema is designed to be stored as a bigquery table.
+
+    Metadata Schema
+    ---------------
+    epub_md5_hash, xhtml_index, xhtml_href, xhtml_md5_hash, title, text, text_split, 
+    text_split_type, xhtml_code
+
+    text_split
+    ----------
+    [ <text 1>, <text 2>, <text 3> ... ]
+
+    text_split_type
+    ---------------
+    [h1, h2, p, ... ]
+    """
+    output_records = []
+    for a_page in epub_xhtml_iter(epub_file):
+        record = {a_key: a_page[a_key] for a_key in a_page if not a_key == 'xhtml_content'}
+        parsed_xhtml = parse_xhtml_contents(a_page['xhtml_content'])
+        record.update(parsed_xhtml)
+        output_records.append(record)
+    return output_records
+
+
+def epub_iter(epub_file: str) -> Iterator[Dict]:
+    """
+    A python generator that iterates over the html files within an epub file.
+    :param epub_file: Full path of the file
+    :return: Iterator containing a dictionary of 'title' and body ('text') texts for each html within the epub
+    """
+    for an_item in epub_xhtml_iter(epub_file):
+        text_seg = BeautifulSoup(an_item['xhtml_content'].decode(), 'lxml')
+        yield {'title': text_seg.title.get_text() if text_seg.title else "", 'text': text_seg.body.get_text()}
 
 
 def read_epub(epub_file: str) -> List[Dict]:
