@@ -29,13 +29,13 @@ def epub_get_meta(epub_file: str) -> Dict:
     ## Spine Schema
     [idref, idref, ...]
     """
-    def find_content_file(epub):
+    def find_content_file(epub) -> str:
         content_file = [a_file for a_file in epub.namelist() if "content.opf" in a_file.lower()]
         if not content_file:
             raise Exception("content.opf file not found in epub")
         return content_file[0]
 
-    def extract_meta(content, epub_file):
+    def extract_meta(content, epub_file) -> Dict:
         _, epub_filename = os.path.split(epub_file)
         output_blob = {'md5_hash': file_hash(open(epub_file, "rb")), 'epub_filename': epub_filename, 'content_str': content}
         content_parsed = BeautifulSoup(content, "lxml")
@@ -69,9 +69,12 @@ def epub_get_meta(epub_file: str) -> Dict:
 
     with zf.ZipFile(epub_file) as epub:
         content_file = find_content_file(epub)
-        with epub.open(content_file) as meta_file:
+        root_folder, content_file = os.path.split(content_file)
+        with epub.open(os.path.join(root_folder, content_file)) as meta_file:
             meta_data = clean_xhtml_code(meta_file.read())
-            return extract_meta(meta_data, epub_file)
+            return_dict = extract_meta(meta_data, epub_file)
+            return_dict['root_folder'] = root_folder
+            return return_dict
 
 
 def clean_xhtml_code(xhtml: str) -> str:
@@ -90,11 +93,15 @@ def epub_xhtml_iter(epub_file: str) -> str:
     manifest_map = {
         manifest_item['id']: manifest_item for manifest_item in meta_data['manifest']}
     with zf.ZipFile(epub_file) as epub:
+        epub_nameset = set(epub.namelist())
         for i, idref in enumerate(meta_data['spine']):
             if not idref in manifest_map:
-                raise Exception(
-                    "Spine content was not found in manifest {0}".format(epub_file))
-            xhtml = manifest_map[idref]['item']
+                raise Exception("Spine content was not found in manifest {0}".format(epub_file))
+            xhtml = os.path.join(meta_data['root_folder'], manifest_map[idref]['item'])
+            if xhtml not in epub_nameset:
+                xhtml_temp = xhtml.replace("%20", " ")
+                if xhtml_temp in epub_nameset:
+                    xhtml = xhtml_temp
             with epub.open(xhtml) as epub_page:
                 xhtml_md5_hash = file_hash(epub_page)
             with epub.open(xhtml) as epub_page:
@@ -104,18 +111,32 @@ def epub_xhtml_iter(epub_file: str) -> str:
 
 
 def parse_xhtml_contents(xhtml: str) -> Dict:
+    """
+    Given an xhtml code, extracts the relevant contents
+    """
     cleaned_content = clean_xhtml_code(xhtml)
     parsed_content = BeautifulSoup(cleaned_content, "lxml")
+    
+    text_split = []
+    text_split_type = []
+    for a_tag in parsed_content.body.contents:
+        if not a_tag.name:
+            continue
+        tag_text = a_tag.get_text()
+        if tag_text.strip():
+            text_split.append(tag_text)
+            text_split_type.append(a_tag.name)
+
     record = {'xhtml_code': cleaned_content, 
               'title': parsed_content.title.get_text() if parsed_content.title else "",
               'text': parsed_content.body.get_text() if parsed_content.body else "",
-              'text_split': [a_tag.get_text() for a_tag in parsed_content.body.contents if a_tag.name],
-              'text_split_type': [a_tag.name for a_tag in parsed_content.body.contents if a_tag.name]
+              'text_split': text_split,
+              'text_split_type': text_split_type
               }
     return record
 
 
-def epub_to_json(epub_file: str) -> List[str]:
+def epub_extract_contents(epub_file: str) -> List[str]:
     """
     Reads the xhtml files of an epub and produces a list of json strings with the following schema.
     The schema is designed to be stored as a bigquery table.
@@ -196,14 +217,28 @@ def pdf_iter(pdf_file: str, accumulate_per_page: bool = True) -> Iterator[Dict]:
             yield {'text': "\n".join(texts_per_page)}
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Bangla Ebook Parser")
-    parser.add_argument("--get_meta", action="store", default=None, type=str, nargs="+", help="Extracts the meta for a given epub and outputs to stdout \
-        as a newline-delimited json. Please provide the full path of the epub file as an input argument.")
+    parser.add_argument("--get_epub_meta", action="store", default=None, type=str, 
+        nargs="+", help="Extracts the meta for a given epub and outputs to stdout \
+        as a newline-delimited json. Please provide the full path of the epub file as the input argument.")
+    parser.add_argument("--get_epub_text", action="store", default=None, type=str, 
+        nargs="+", help="Extracts the text contents of a given epub and outputs to stdout \
+        as a newline-delimited json. Please provide the full path of the epub file as the input argument.")
     args = parser.parse_args()
 
-    if args.get_meta:
-        filename = " ".join(args.get_meta)
+    if args.get_epub_meta:
+        filename = " ".join(args.get_epub_meta)
         meta = json.dumps(epub_get_meta(filename), ensure_ascii=False)
         meta = "{0}\n".format(meta).encode("utf8")
         sys.stdout.buffer.write(meta)
+
+    if args.get_epub_text:
+        filename = " ".join(args.get_epub_text)
+        data = "\n".join([json.dumps(a_record, ensure_ascii=False) for a_record in epub_extract_contents(filename)])
+        data = "{0}\n".format(data).encode("utf8")
+        sys.stdout.buffer.write(data)
+
+
+if __name__ == "__main__":
+    main()
