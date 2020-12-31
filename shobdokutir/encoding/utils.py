@@ -1,3 +1,7 @@
+import argparse
+import glob
+import os
+import shutil
 import sys
 import hashlib
 import re
@@ -408,3 +412,42 @@ def file_hash(f_in: BinaryIO, buffer_size = 65536) -> str:
         md5.update(data)
     return md5.hexdigest()
 
+
+def hasify_folder_contents(src_folder):
+    """
+    Renames all the contents of src_folder by their md5 hash and places them in
+    another folder (the name of this folder is augmented by the term "md5") in the same
+    level as the src_folder.
+    """
+    for path, _, files in os.walk(src_folder):
+        for file in files:
+            a_file = os.path.join(path, file)
+            file_path, file_name = os.path.split(os.path.abspath(a_file))
+            parent_path, content_folder = os.path.split(file_path)
+            file_name, file_ext = os.path.splitext(file_name)
+            with open(a_file, "rb") as f_in:
+                file_md5 = file_hash(f_in)
+            dest_folder = os.path.join(parent_path, "{0}_md5".format(content_folder))
+            if not os.path.exists(dest_folder):
+                os.makedirs(dest_folder)
+            dest = os.path.join(dest_folder, "{0}{1}".format(file_md5, file_ext))
+            shutil.copyfile(a_file, dest)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Bangla Encoding Utils")
+    parser.add_argument("--rename_md5", action="store", default=None, type=str, 
+                        dest="rename_md5_src_folder", help=
+                        """    
+                        Renames all the contents of <src_folder> by their md5 hash and places them in
+                        another folder (the name of this folder is augmented by the term "md5") in the same
+                        level as the src_folder. Please provide <src_folder> as argument.
+                        """)
+    args = parser.parse_args()
+
+    if args.rename_md5_src_folder:
+        hasify_folder_contents(args.rename_md5_src_folder)
+
+
+if __name__ == "__main__":
+    main()
